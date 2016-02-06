@@ -14,11 +14,49 @@ module.exports = (robot) ->
 
 	robot.respond /はいさい/i, (msg) ->
 		msg.send "プロデューサー！はいさい！！"
-		
-		
+
+
 	robot.hear /(.*)つらい(.*)/i, (msg) ->
 		msg.send "よしよし"
+
+	# 起きた時
+	cid = setInterval ->
+		return if typeof robot?.send isnt 'function'
+		robot.send {room: "general"}, "おはようプロデューサー！ 今日も頑張ろうね"
+		clearInterval cid
+	, 1000
+
+
+	# 寝るとき
+	on_sigterm = ->
+		robot.send {room: "general"}, "今日も疲れたぞ〜。おやすみプロデューサー！"
+		setTimeout process.exit, 1000
+
+	if process._events.SIGTERM?
+		process._events.SIGTERM = on_sigterm
+	else
+		process.on 'SIGTERM', on_sigterm
+
+
+	cronjob = new cronJob(
+		cronTime : "0 0 7 * * *"
+		start : true
+		timeZone : "Asia/Tokyo"
+		onTick : ->
+			robot.send {room: "general"}, "起きてプロデューサー"
+			return
+	)
 	
+	cronjob2 = new cronJob(
+		cronTime : "0 0 * * * *"
+		start : true
+		timeZone : "Asia/Tokyo"
+		onTick : ->
+			robot.send {room: "general"}, "#{new Date().currentTime.getHours()}時だぞ！"
+			return
+	)
+	
+
 
 
 
