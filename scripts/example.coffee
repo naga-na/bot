@@ -56,7 +56,14 @@ module.exports = (robot) ->
 			return
 	)
 	
-
+	cronjob3 = new cronJob(
+		cronTime : "0 30 * * * *"
+		start : true
+		timeZone : "Asia/Tokyo"
+		onTick : ->
+			robot.send {room: "general"}, "そのうち豆知識を披露しちゃうからな？ほんとだぞ！？"
+			return
+	)
 
 
 
