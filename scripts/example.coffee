@@ -8,10 +8,15 @@
 #
 #   These are from the scripting documentation: https://github.com/github/hubot/blob/master/docs/scripting.md
 cronJob = require('cron').CronJob
+request = require 'request'
+client = require 'cheerio-httpcli'
+URL = require 'url'
 
 
 module.exports = (robot) ->
 
+	url = "http://www.nikkei.com/"
+	
 	robot.respond /はいさい/i, (msg) ->
 		msg.send "プロデューサー！はいさい！！"
 
@@ -19,6 +24,16 @@ module.exports = (robot) ->
 	robot.hear /(.*)つらい(.*)/i, (msg) ->
 		msg.send "よしよし"
 
+	robot.hear /(.*)ニュース(.*)/i, (msg) ->
+		msg.send "今日のニュースだぞ！"
+		client.fetch(url, {}, (err, $, res) ->
+			$('a[href^="/article"][target]').each ->
+				msg.send $(this).text()
+				msg.send URL.resolve(url, $(this).attr('href'))
+		)
+	
+	
+	
 	# 起きた時
 	cid = setInterval ->
 		return if typeof robot?.send isnt 'function'
@@ -37,6 +52,20 @@ module.exports = (robot) ->
 	else
 		process.on 'SIGTERM', on_sigterm
 
+	
+	
+	new cronJob(
+		cronTime : "0 5 7 * * *"
+		start : true
+		timeZone : "Asia/Tokyo"
+		onTick : ->
+			msg.send "今日のニュースだぞ！"
+			client.fetch(url, {}, (err, $, res) ->
+				$('a[href^="/article"][target]').each ->
+				msg.send $(this).text()
+				msg.send URL.resolve(url, $(this).attr('href'))
+			)
+	)
 
 	cronjob = new cronJob(
 		cronTime : "0 0 7 * * *"
@@ -47,15 +76,9 @@ module.exports = (robot) ->
 			return
 	)
 	
-	cronjob2 = new cronJob(
-		cronTime : "0 0 * * * *"
-		start : true
-		timeZone : "Asia/Tokyo"
-		onTick : ->
-			robot.send {room: "general"}, "#{new Date().currentTime.getHours()}時だぞ！"
-			return
-	)
 	
+	
+	###
 	cronjob3 = new cronJob(
 		cronTime : "0 30 * * * *"
 		start : true
@@ -64,7 +87,10 @@ module.exports = (robot) ->
 			robot.send {room: "general"}, "そのうち豆知識を披露しちゃうからな？ほんとだぞ！？"
 			return
 	)
+	###
 
+	# send HTTP request
+	
 
 
   # robot.hear /badger/i, (res) ->
