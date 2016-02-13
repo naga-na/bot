@@ -12,6 +12,18 @@ request = require 'request'
 client = require 'cheerio-httpcli'
 URL = require 'url'
 
+# 日経のニュースを取得する
+getNikkeiNews = ($, url) ->
+	newsList = []
+	$('a[href^="/article"][target]').each ->
+		# TODO:でかい画像のリンクを消す
+		if /(.)*\?bu=(.*)/.test($(this).attr('href')) is false
+			t = $(this).text()
+			l = URL.resolve(url, $(this).attr('href'))
+			if t.length isnt 0 and /^◇/.test(t) is false
+				newsList.push {title: t, link : l}
+	newsList
+
 
 module.exports = (robot) ->
 
@@ -25,15 +37,16 @@ module.exports = (robot) ->
 		msg.send "よしよし"
 
 	robot.hear /(.*)ニュース(.*)/i, (msg) ->
-		msg.send "今日のニュースだぞ！"
+		msg.send "日経のニュースだぞ！"
 		client.fetch(url, {}, (err, $, res) ->
-			$('a[href^="/article"][target]').each ->
-				msg.send $(this).text()
-				msg.send URL.resolve(url, $(this).attr('href'))
+			list = getNikkeiNews($, url)
+			for n in list
+				msg.send n.title
+				msg.send n.link
 		)
-	
-	
-	
+		
+		
+		
 	# 起きた時
 	cid = setInterval ->
 		return if typeof robot?.send isnt 'function'
@@ -54,6 +67,7 @@ module.exports = (robot) ->
 
 	
 	
+	# 朝はニュースを全部出す
 	new cronJob(
 		cronTime : "0 5 7 * * *"
 		start : true
