@@ -82,12 +82,13 @@ module.exports = (robot) ->
 		start : true
 		timeZone : "Asia/Tokyo"
 		onTick : ->
-			msg.send "今日のニュースだぞ！"
+			msg.send "今日の情報だぞ！"
 			client.fetch(url, {}, (err, $, res) ->
 				$('a[href^="/article"][target]').each ->
 				msg.send $(this).text()
 				msg.send URL.resolve(url, $(this).attr('href'))
 			)
+			getWeatherAichi(aichiWeatherUrl, msg)
 	)
 
 	cronjob = new cronJob(
