@@ -17,7 +17,6 @@ getNikkeiNews = ($, url) ->
 
 
 # 天気予報を取得
-# TODO: リストで返すように
 getWeatherAichi = ($, url) ->
 	weatherList = []
 	$("item > title").each (idx) ->
