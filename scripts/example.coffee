@@ -30,10 +30,20 @@ getWeatherAichi = (url, msg) ->
 			
 	)
 
+# yahoo newsを取得する
+getYahooNews = ($, url) ->
+	newsList = []
+	$('#epTabTop .ttl a').each ->
+		ttl = $(this).text()
+		ln = URL.resolve(url, $(this).attr('href'))
+		newsList.push {title: ttl, link: ln}
+	newsList
+	
 
 module.exports = (robot) ->
-
-	url = "http://www.nikkei.com/"
+	
+	yahooUrl = "http://news.yahoo.co.jp/"
+	nikkeiUrl = "http://www.nikkei.com/"
 	aichiWeatherUrl = "http://weather.livedoor.com/forecast/rss/area/230010.xml"
 	robot.respond /はいさい/i, (msg) ->
 		msg.send "プロデューサー！はいさい！！"
@@ -42,17 +52,30 @@ module.exports = (robot) ->
 	robot.hear /(.*)つらい(.*)/i, (msg) ->
 		msg.send "よしよし"
 
-	robot.hear /(.*)ニュース(.*)/i, (msg) ->
+	robot.hear /(.*)にっけいニュース(.*)/i, (msg) ->
 		msg.send "日経のニュースだぞ！"
-		client.fetch(url, {}, (err, $, res) ->
-			list = getNikkeiNews($, url)
+		client.fetch(nikkeiUrl, {}, (err, $, res) ->
+			list = getNikkeiNews($, nikkieiUrl)
+			for n in list
+				msg.send n.title
+				msg.send n.link
+		)
+		
+	# ヤフーニュース
+	robot.hear /(.*)ニュース(.*)/i, (msg) ->
+		msg.send "やふーにゅーすだぞ"
+		sayYahooNews(msg, yahooUrl)
+		
+	sayYahooNews = (msg, yahooUrl) ->
+		client.fetch(yahooUrl, {}, (err, $, res) ->
+			list = getYahooNews($, yahooUrl)
 			for n in list
 				msg.send n.title
 				msg.send n.link
 		)
 		
 	# 天気
-	robot.hear /天気/i, (msg) ->
+	robot.hear /(.*)天気(.*)/i, (msg) ->
 		msg.send "ふふーん今週の天気はこんな感じだぞ!"
 		getWeatherAichi(aichiWeatherUrl, msg)
 		
@@ -97,6 +120,14 @@ module.exports = (robot) ->
 		timeZone : "Asia/Tokyo"
 		onTick : ->
 			robot.send {room: "general"}, "起きてプロデューサー"
+			client.fetch(yahooUrl, {}, (err, $, res) ->
+				list = getYahooNews($, yahooUrl)
+				for n in list
+					robot.send {room: "general"}, n.title
+					robot.send {room: "general"}, n.link
+			)
 			return
 	)
+	
+	
 	
