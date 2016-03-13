@@ -13,22 +13,20 @@ getNikkeiNews = ($, url) ->
 			l = URL.resolve(url, $(this).attr('href'))
 			if t.length isnt 0 and /^◇/.test(t) is false
 				newsList.push {title: t, link : l}
-	newsList
+	return(newsList)
 
 
 # 天気予報を取得
 # TODO: リストで返すように
-getWeatherAichi = (url, msg) ->
-	client.fetch(url, {}, (err, $, res) ->
-		if err
-			console.log "error"
+getWeatherAichi = ($, url) ->
+	weatherList = []
+	$("item > title").each (idx) ->
+		# 天気以外の情報を除く
+		if /(.*)PR(.*)/.test($(this).text())
 			return
-		$("item > title").each (idx) ->
-			if /(.*)PR(.*)/.test($(this).text())
-				return
-			msg.send $(this).text()
-			
-	)
+		weatherList.push $(this).text()
+	return(weatherList)
+
 
 # yahoo newsを取得する
 getYahooNews = ($, url) ->
@@ -37,21 +35,24 @@ getYahooNews = ($, url) ->
 		ttl = $(this).text()
 		ln = URL.resolve(url, $(this).attr('href'))
 		newsList.push {title: ttl, link: ln}
-	newsList
+	return(newsList)
 	
 
 module.exports = (robot) ->
 	
+	# 取得URL先
 	yahooUrl = "http://news.yahoo.co.jp/"
 	nikkeiUrl = "http://www.nikkei.com/"
 	aichiWeatherUrl = "http://weather.livedoor.com/forecast/rss/area/230010.xml"
+	
+	# レスポンス
 	robot.respond /はいさい/i, (msg) ->
 		msg.send "プロデューサー！はいさい！！"
-
 
 	robot.hear /(.*)つらい(.*)/i, (msg) ->
 		msg.send "よしよし"
 
+	# ニュース
 	robot.hear /(.*)にっけいニュース(.*)/i, (msg) ->
 		msg.send "日経のニュースだぞ！"
 		client.fetch(nikkeiUrl, {}, (err, $, res) ->
@@ -61,7 +62,6 @@ module.exports = (robot) ->
 				msg.send n.link
 		)
 		
-	# ヤフーニュース
 	robot.hear /(.*)ニュース(.*)/i, (msg) ->
 		msg.send "やふーにゅーすだぞ"
 		sayYahooNews(msg, yahooUrl)
@@ -77,8 +77,13 @@ module.exports = (robot) ->
 	# 天気
 	robot.hear /(.*)天気(.*)/i, (msg) ->
 		msg.send "ふふーん今週の天気はこんな感じだぞ!"
-		getWeatherAichi(aichiWeatherUrl, msg)
+		client.fetch(aichiWeatherUrl, {}, (err, $, res) ->
+			list = getWeatherAichi($, aichiWeatherUrl)
+			for n in list
+				msg.send n
+		)
 		
+	
 	# 起きた時
 	cid = setInterval ->
 		return if typeof robot?.send isnt 'function'
@@ -99,34 +104,27 @@ module.exports = (robot) ->
 
 	
 	
-	# 朝はニュースを全部出す
-	cronjob2 = new cronJob(
-		cronTime : "0 5 7 * * *"
-		start : true
-		timeZone : "Asia/Tokyo"
-		onTick : ->
-			msg.send "今日の情報だぞ！"
-			client.fetch(url, {}, (err, $, res) ->
-				$('a[href^="/article"][target]').each ->
-				msg.send $(this).text()
-				msg.send URL.resolve(url, $(this).attr('href'))
-			)
-			getWeatherAichi(aichiWeatherUrl, msg)
-	)
-
+	# 朝のあいさつと必要情報をつぶやく
 	cronjob = new cronJob(
 		cronTime : "0 0 7 * * *"
 		start : true
 		timeZone : "Asia/Tokyo"
 		onTick : ->
 			robot.send {room: "general"}, "起きてプロデューサー"
+			# ニュース取得
 			client.fetch(yahooUrl, {}, (err, $, res) ->
 				list = getYahooNews($, yahooUrl)
 				for n in list
 					robot.send {room: "general"}, n.title
 					robot.send {room: "general"}, n.link
 			)
-			return
+			# 天気
+			client.fetch(aichiWeatherUrl, {}, (err, $, res) ->
+				list = getWeatherAichi($, aichiWeatherUrl)
+				for n in list
+					robot.send {room: "general"}, n
+			)
+
 	)
 	
 	
